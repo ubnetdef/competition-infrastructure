@@ -1,0 +1,107 @@
+version: "3.3"
+
+services:
+  bank:
+    image: ubnetdef/bank-api
+    configs:
+      - source: bank_config
+        target: /opt/bank-api/config.py
+    ports:
+      - "8080:8080"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  database:
+    image: mariadb:10.3
+    command: ["--max-connections=2048"]
+    environment:
+      # MYSQL_USER: engine
+      # MYSQL_PASSWORD: changeme
+      MYSQL_ROOT_PASSWORD: changeme
+    configs:
+      - source: database_init
+        target: /docker-entrypoint-initdb.d/lockdown.sql
+    volumes:
+      - /srv/lockdown-database:/var/lib/mysql
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.database == true
+
+  flower:
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=amqp://lockdown:changeme@rabbitmq:5672//
+      - FLOWER_BASIC_AUTH=lockdown:changeme
+    ports:
+      - "5555:5555"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  ie2:
+    image: ubnetdef/ie2
+    ports:
+      - "80:80"
+    configs:
+      - source: ie2_config
+        target: /srv/ie2/.env
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=lockdown
+      - RABBITMQ_DEFAULT_PASS=changeme
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  se2_master:
+    image: ubnetdef/scoreengine2
+    command: run --resume --use-task-queue
+    configs:
+      - source: se2_config
+        target: /opt/scoreengine2/config.yml
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  se2_worker:
+    image: ubnetdef/scoreengine2
+    command: worker
+    configs:
+      - source: se2_config
+        target: /opt/scoreengine2/config.yml
+    deploy:
+      mode: global
+      # replicas: 2
+      placement:
+        constraints:
+          - node.role != manager
+
+configs:
+  bank_config:
+    file: ./files/bank_config.py
+  database_init:
+    file: ./files/database.sql
+  ie2_config:
+    file: ./files/ie2.env
+  se2_config:
+    file: ./files/se2_config.yml
+
+networks:
+  default:
+    attachable: yes

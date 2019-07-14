@@ -1,0 +1,149 @@
+---
+database:
+  url: &db "mysql+pymysql://se2:secret@database:3306/scoreengine"
+  pool_size: 40
+  max_overflow: 60
+
+bank:
+  enabled: yes
+  server: bank:8080
+  username: scoring
+  password: wXOMr2r7xEjodwt
+
+celery:
+  backend: *db
+  broker: amqp://lockdown:changeme@rabbitmq:5672//
+  worker:
+    concurrency: 20
+    loglevel: INFO
+    traceback: yes
+
+logging:
+  format: '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+  level: INFO
+
+checks:
+  database:
+    min_tables_count: 333
+    max_tables_count: 340
+
+# time units are expressed in seconds
+round:
+  duration: 60
+  jitter: 5
+
+# traffic generator
+trafficgen:
+  number: 10
+  sleep: 10
+
+teams:
+  minimum: 1
+  maximum: 15
+  check_teams: []
+
+services:
+  - name: Linux Client A ICMP
+    check: icmp.check_icmp
+    data:
+      - key: HOST
+        value: "10.{team}.1.10"
+  - name: Linux Client B SSH
+    check: ssh.check_connect
+    data:
+      - key: HOST
+        value: "10.{team}.1.20"
+      - key: USERPASS
+        value: "Tuna||Changeme2019!"
+        editable: yes
+  - name: Linux Client C ICMP
+    check: icmp.check_icmp
+    data:
+      - key: HOST
+        value: "10.{team}.1.30"
+  - name: Windows Client A WinRM
+    check: winrm.check_connect
+    data:
+      - key: HOST
+        value: "10.{team}.1.40"
+      - key: USERPASS
+        value: "SHARK\\Koi||Changeme2019!"
+        editable: yes
+  - name: Windows Client B ICMP
+    check: icmp.check_icmp
+    data:
+      - key: HOST
+        value: "10.{team}.1.50"
+  - name: AD DS
+    check: ldap.check_ldap_lookup
+    data:
+      - key: HOST
+        value: "10.{team}.1.60"
+      - key: DOMAIN
+        value: "sharkattack.fish"
+      - key: USERPASS
+        value: "Mahi||Changeme2019!"
+        editable: yes
+  - name: DNS
+    check: dns.check_dns
+    data:
+      - key: HOST
+        value: "10.{team}.1.60"
+      - key: LOOKUP
+        value: "ad.sharkattack.fish"
+        editable: yes
+      - key: TYPE
+        value: A
+        editable: yes
+      - key: EXPECTED
+        value: "10.{team}.1.60"
+        editable: yes
+  - name: Magento
+    check: http.check_http
+    data:
+      - key: HOST
+        value: "10.{team}.2.2"
+      - key: PORT
+        value: 80
+        editable: yes
+  - name: Database
+    check: database.check_query_mysql
+    data:
+      - key: HOST
+        value: "10.{team}.2.3"
+      - key: PORT
+        value: 3306
+        editable: yes
+      - key: USERPASS
+        value: "admin||changeme"
+        editable: yes
+      - key: DB_LOOKUP
+        value: magento
+  - name: FTP
+    check: ftp.check_upload_download
+    data:
+      - key: HOST
+        value: "10.{team}.2.4"
+      - key: USERPASS
+        value: "Nemo||Changeme2019!"
+        editable: yes
+  - name: GitLab HTTP
+    check: http.check_gitlab
+    data:
+      - key: HOST
+        value: "10.{team}.2.5"
+      - key: PORT
+        value: 80
+        editable: yes
+      - key: USERPASS
+        value: "root||5iveL!fe"
+        editable: yes
+  - name: GitLab SSH
+    check: ssh.check_connect
+    data:
+      - key: HOST
+        value: "10.{team}.2.5"
+      - key: USERPASS
+        value: "Cod||Changeme2019!"
+        editable: yes
+...
